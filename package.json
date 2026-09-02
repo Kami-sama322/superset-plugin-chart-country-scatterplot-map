@@ -1,0 +1,50 @@
+{
+  "name": "@superset-ui/plugin-chart-country-scatterplot-map",
+  "version": "1.0.0",
+  "description": "Superset chart plugin: Country Map choropleth with Scatter Plot bubble overlay",
+  "keywords": [
+    "superset",
+    "chart",
+    "country-map",
+    "scatterplot",
+    "geo",
+    "choropleth"
+  ],
+  "homepage": "https://github.com/Kami-sama322/superset-plugin-chart-country-scatterplot-map",
+  "bugs": {
+    "url": "https://github.com/Kami-sama322/superset-plugin-chart-country-scatterplot-map/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kami-sama322/superset-plugin-chart-country-scatterplot-map.git"
+  },
+  "license": "Apache-2.0",
+  "author": "Alexander Tsay",
+  "sideEffects": [
+    "*.css",
+    "mapbox-gl/dist/mapbox-gl.css"
+  ],
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "files": ["src"],
+  "dependencies": {
+    "@mapbox/geojson-extent": "^1.0.1",
+    "d3": "^3.5.17",
+    "d3-array": "^3.2.4",
+    "handlebars": "^4.7.8"
+  },
+  "peerDependencies": {
+    "@apache-superset/core": "*",
+    "@deck.gl/layers": "*",
+    "@deck.gl/geo-layers": "*",
+    "@deck.gl/extensions": "*",
+    "@superset-ui/chart-controls": "*",
+    "@superset-ui/core": "*",
+    "@superset-ui/legacy-plugin-chart-country-map": "*",
+    "@superset-ui/legacy-preset-chart-deckgl": "*",
+    "mapbox-gl": "*",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-map-gl": "^6.1.19"
+  }
+}
