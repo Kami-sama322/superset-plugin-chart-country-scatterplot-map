@@ -17,7 +17,7 @@
  * under the License.
  */
 import { t } from '@apache-superset/core/translation';
-import { ChartMetadata, ChartPlugin } from '@superset-ui/core';
+import { Behavior, ChartMetadata, ChartPlugin } from '@superset-ui/core';
 import buildQuery from './buildQuery';
 import controlPanel from './controlPanel';
 import transformProps from './transformProps';
@@ -29,10 +29,12 @@ export default class CountryScatterplotMapChartPlugin extends ChartPlugin {
       name: t('Country Scatterplot Map'),
       description: t(
         'Choropleth country map with metric-sized scatter bubbles at region centers. ' +
-          'Combines Country Map region coloring with Scatter Plot bubble sizing.',
+          'Combines Country Map region coloring with Scatter Plot bubble sizing. ' +
+          'Emits dashboard cross-filters on region click.',
       ),
+      behaviors: [Behavior.InteractiveChart],
       category: t('Map'),
-      tags: [t('Geo'), t('Comparison'), t('Scatter'), t('2D')],
+      tags: [t('Geo'), t('Comparison'), t('Scatter'), t('2D'), t('Interactive')],
       thumbnail,
       credits: ['https://bl.ocks.org/john-guerra'],
     });

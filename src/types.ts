@@ -1,8 +1,11 @@
 import {
+  DataRecordValue,
+  FilterState,
   QueryFormColumn,
   QueryFormData,
   QueryFormMetric,
   SetControlValue,
+  SetDataMaskHook,
 } from '@superset-ui/core';
 
 export type BubbleColorMode = 'fixed' | 'linear';
@@ -57,6 +60,7 @@ export interface CountryScatterplotMapQueryFormData extends QueryFormData {
 
 export interface RegionMapDataItem {
   country_id: string;
+  filterValue?: DataRecordValue;
   metric: number;
   longitude?: number;
   latitude?: number;
@@ -95,6 +99,10 @@ export interface CountryScatterplotMapTransformedProps {
   useLatLonBubbles: boolean;
   bubbleData: RegionMapDataItem[];
   setControlValue?: SetControlValue;
+  entityColumn: string;
+  filterState: FilterState;
+  setDataMask: SetDataMaskHook;
+  emitCrossFilters?: boolean;
 }
 
 export const DEFAULT_FORM_DATA: Partial<CountryScatterplotMapQueryFormData> = {

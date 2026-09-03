@@ -96,6 +96,7 @@ export function enrichGeoJson(
         properties: {
           ...feature.properties,
           country_id: iso,
+          filter_value: row?.filterValue ?? iso,
           metric: row?.metric,
           region_name: getRegionName(feature),
           extra: row?.extra,
@@ -109,12 +110,35 @@ export function featureToRegionItem(
   properties: Record<string, unknown> | undefined,
 ): RegionMapDataItem {
   const propsObj = properties || {};
+  const countryId = String(propsObj.country_id || propsObj.ISO || '');
+  const filterRaw = propsObj.filter_value ?? countryId;
   return {
-    country_id: String(propsObj.country_id || propsObj.ISO || ''),
+    country_id: countryId,
+    filterValue:
+      typeof filterRaw === 'string' ||
+      typeof filterRaw === 'number' ||
+      typeof filterRaw === 'boolean'
+        ? filterRaw
+        : String(filterRaw),
     metric: Number(propsObj.metric ?? 0),
     region_name: String(propsObj.region_name || propsObj.country_id || ''),
     extra: (propsObj.extra as Record<string, unknown>) || {},
   };
+}
+
+export function findFeatureByIso(
+  geoJson: FeatureCollection,
+  iso: string,
+) {
+  const target = normalizeIso(iso);
+  if (!target) {
+    return null;
+  }
+  return (
+    geoJson.features.find(
+      feature => normalizeIso(feature.properties?.ISO) === target,
+    ) || null
+  );
 }
 
 export function buildBubblePoints(

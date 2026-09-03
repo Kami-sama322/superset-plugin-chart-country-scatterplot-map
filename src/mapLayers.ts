@@ -8,6 +8,10 @@ import type { ColorScale } from './mapData';
 import { normalizeIso } from './columnUtils';
 import type { BubblePoint, RegionMapDataItem } from './types';
 
+const DEFAULT_LINE: [number, number, number, number] = [255, 255, 255, 240];
+const SELECTED_LINE: [number, number, number, number] = [20, 20, 20, 255];
+const DIM_FILL_FACTOR = 0.35;
+
 type MapLayerOptions = {
   enrichedGeoJson: FeatureCollection;
   geoJson: FeatureCollection;
@@ -20,6 +24,9 @@ type MapLayerOptions = {
   deckMapStyle: string;
   polygonAlpha: number;
   showWorldMap: boolean;
+  selectedIso: string | null;
+  emitCrossFilters?: boolean;
+  onRegionSelect: (item: RegionMapDataItem) => void;
   showTooltip: (
     source: string,
     point: RegionMapDataItem,
@@ -28,6 +35,13 @@ type MapLayerOptions = {
   ) => void;
   hideTooltip: (source: string) => void;
 };
+
+function dimAlpha(alpha: number, selected: boolean, hasSelection: boolean) {
+  if (!hasSelection || selected) {
+    return alpha;
+  }
+  return Math.max(40, Math.round(alpha * DIM_FILL_FACTOR));
+}
 
 export function createMapLayers({
   enrichedGeoJson,
@@ -41,40 +55,55 @@ export function createMapLayers({
   deckMapStyle,
   polygonAlpha,
   showWorldMap,
+  selectedIso,
+  emitCrossFilters,
+  onRegionSelect,
   showTooltip,
   hideTooltip,
 }: MapLayerOptions) {
   const rasterUrl = deckStyleToRasterUrl(deckMapStyle);
   const clipBasemap = !showWorldMap;
-  const maskLayer =
-    clipBasemap ? createCountryMaskLayer(geoJson) : null;
+  const maskLayer = clipBasemap ? createCountryMaskLayer(geoJson) : null;
   const basemapLayer = rasterUrl
     ? createBasemapLayer(rasterUrl, clipBasemap)
     : null;
+  const hasSelection = Boolean(selectedIso);
+  const pickable = true;
 
   const regionLayer = new GeoJsonLayer({
     id: 'country-scatterplot-regions',
     data: enrichedGeoJson,
     filled: true,
     stroked: true,
-    pickable: true,
+    pickable,
     autoHighlight: true,
     highlightColor: [26, 26, 26, 120],
+    lineWidthUnits: 'pixels',
     lineWidthMinPixels: 2,
-    getLineColor: [255, 255, 255, 240],
+    getLineColor: (feature: { properties?: Record<string, unknown> }) => {
+      const iso = normalizeIso(feature.properties?.ISO);
+      return iso && iso === selectedIso ? SELECTED_LINE : DEFAULT_LINE;
+    },
     getFillColor: (feature: { properties?: Record<string, unknown> }) => {
       const iso = normalizeIso(feature.properties?.ISO);
       const row = dataByIso[iso];
+      const selected = Boolean(iso && iso === selectedIso);
+      const alpha = dimAlpha(polygonAlpha, selected, hasSelection);
       if (!row) {
-        return [200, 200, 200, polygonAlpha];
+        return [200, 200, 200, alpha];
       }
       const css = linearColorScale(row.metric) ?? '#cccccc';
-      return cssColorToRgba(css, polygonAlpha);
+      return cssColorToRgba(css, alpha);
+    },
+    getLineWidth: (feature: { properties?: Record<string, unknown> }) => {
+      const iso = normalizeIso(feature.properties?.ISO);
+      return iso && iso === selectedIso ? 4 : 1.5;
     },
     updateTriggers: {
-      getFillColor: [polygonAlpha, linearColorScheme],
+      getFillColor: [polygonAlpha, linearColorScheme, selectedIso],
+      getLineColor: [selectedIso],
+      getLineWidth: [selectedIso],
     },
-    getLineWidth: 2,
     onHover: ({ object, x, y }) => {
       if (!object) {
         hideTooltip('regions');
@@ -83,27 +112,59 @@ export function createMapLayers({
       showTooltip('regions', featureToRegionItem(object.properties), x, y);
       return true;
     },
+    onClick: ({ object }) => {
+      if (!emitCrossFilters || !object) {
+        return false;
+      }
+      onRegionSelect(featureToRegionItem(object.properties));
+      return true;
+    },
   });
 
   const bubbleLayer = new ScatterplotLayer<BubblePoint>({
     id: 'country-scatterplot-bubbles',
     data: bubblePoints,
-    pickable: true,
+    pickable,
     radiusUnits: 'pixels',
     getPosition: d => d.position,
     getRadius: d => d.radius,
     radiusMinPixels: minRadius,
     radiusMaxPixels: maxRadius,
-    getFillColor: d => d.fillColor,
+    getFillColor: d => {
+      const iso = normalizeIso(d.country_id);
+      const selected = Boolean(iso && iso === selectedIso);
+      const [r, g, b, a] = d.fillColor;
+      return [r, g, b, dimAlpha(a, selected, hasSelection)];
+    },
     stroked: true,
-    getLineColor: [255, 255, 255, 220],
+    lineWidthUnits: 'pixels',
+    getLineColor: d => {
+      const iso = normalizeIso(d.country_id);
+      return iso && iso === selectedIso ? SELECTED_LINE : [255, 255, 255, 220];
+    },
+    getLineWidth: d => {
+      const iso = normalizeIso(d.country_id);
+      return iso && iso === selectedIso ? 3 : 1;
+    },
     lineWidthMinPixels: 1,
+    updateTriggers: {
+      getFillColor: [selectedIso],
+      getLineColor: [selectedIso],
+      getLineWidth: [selectedIso],
+    },
     onHover: ({ object, x, y }) => {
       if (!object) {
         hideTooltip('bubbles');
         return false;
       }
       showTooltip('bubbles', object, x, y);
+      return true;
+    },
+    onClick: ({ object }) => {
+      if (!emitCrossFilters || !object) {
+        return false;
+      }
+      onRegionSelect(object);
       return true;
     },
   });

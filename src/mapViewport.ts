@@ -2,7 +2,11 @@ import type { FeatureCollection } from 'geojson';
 import fitViewport, {
   Viewport,
 } from '../../legacy-preset-chart-deckgl/src/utils/fitViewport';
-import { getGeoJsonBoundsPoints } from './geoColorUtils';
+import {
+  getFeatureBoundsPoints,
+  getGeoJsonBoundsPoints,
+} from './geoColorUtils';
+import { findFeatureByIso } from './mapData';
 import type { BubblePoint, MapViewport } from './types';
 
 export function fitMapViewport(
@@ -12,12 +16,29 @@ export function fitMapViewport(
   autozoom: boolean,
   geoJson: FeatureCollection | null,
   bubblePoints: BubblePoint[],
+  selectedIso?: string | null,
 ): Viewport {
   const baseViewport = {
     ...(viewportProp || {}),
     width,
     height,
   } as Viewport;
+
+  if (selectedIso && geoJson) {
+    const feature = findFeatureByIso(geoJson, selectedIso);
+    if (feature) {
+      const regionPoints = getFeatureBoundsPoints(feature);
+      if (regionPoints.length) {
+        return fitViewport(baseViewport, {
+          width,
+          height,
+          points: regionPoints,
+          padding: 48,
+        });
+      }
+    }
+  }
+
   if (!autozoom || !geoJson) {
     return baseViewport;
   }

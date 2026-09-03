@@ -195,4 +195,17 @@ export function getGeoJsonBoundsPoints(
   ];
 }
 
+export function getFeatureBoundsPoints(
+  feature: Feature,
+): [number, number][] {
+  const bounds = extentOf(feature);
+  if (!bounds) {
+    return [];
+  }
+  return [
+    [bounds[0], bounds[1]],
+    [bounds[2], bounds[3]],
+  ];
+}
+
 export type RegionFeature = Feature<Geometry, Record<string, unknown>>;

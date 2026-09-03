@@ -3,6 +3,7 @@ import {
   buildBubblePoints,
   enrichGeoJson,
   featureToRegionItem,
+  findFeatureByIso,
   indexByIso,
   isoCenters,
   metricDomain,
@@ -53,12 +54,14 @@ test('enrichGeoJson copies metric and region name onto features', () => {
   const enriched = enrichGeoJson(geoJson, {
     'RU-TOM': {
       country_id: 'RU-TOM',
+      filterValue: 'tomsk',
       metric: 12,
       extra: { city: 'Tomsk' },
     },
   });
   expect(enriched.features[0].properties).toMatchObject({
     country_id: 'RU-TOM',
+    filter_value: 'tomsk',
     metric: 12,
     region_name: 'Tomsk',
     extra: { city: 'Tomsk' },
@@ -75,10 +78,16 @@ test('featureToRegionItem reads ISO fallbacks', () => {
     }),
   ).toEqual({
     country_id: 'RU-TOM',
+    filterValue: 'RU-TOM',
     metric: 5,
     region_name: 'Tomsk',
     extra: { a: 1 },
   });
+});
+
+test('findFeatureByIso locates feature by normalized ISO', () => {
+  expect(findFeatureByIso(geoJson, 'ru-tom')?.properties?.ISO).toBe('RU-TOM');
+  expect(findFeatureByIso(geoJson, 'missing')).toBeNull();
 });
 
 test('buildBubblePoints places ISO bubbles on region centers', () => {

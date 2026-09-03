@@ -1,6 +1,7 @@
 import {
   ChartProps,
   DataRecord,
+  DataRecordValue,
   getColumnLabel,
   getMetricLabel,
 } from '@superset-ui/core';
@@ -29,6 +30,7 @@ const LON_ALIASES = ['longitude', 'lon', 'lng'];
 const LAT_ALIASES = ['latitude', 'lat'];
 const LON_KEY_RE = /(^|_)(lon|lng|longitude)$/i;
 const LAT_KEY_RE = /(^|_)(lat|latitude)$/i;
+const NOOP = () => undefined;
 
 function toNumber(value: unknown): number | undefined {
   if (value === null || value === undefined || value === '') {
@@ -111,10 +113,33 @@ function pick<T>(
   return undefined;
 }
 
+function toFilterValue(value: unknown): DataRecordValue | undefined {
+  if (value === null || value === undefined || value === '') {
+    return undefined;
+  }
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return value;
+  }
+  return String(value);
+}
+
 export default function transformProps(
   chartProps: ChartProps,
 ): CountryScatterplotMapTransformedProps {
-  const { width, height, formData, queriesData, hooks, rawFormData } = chartProps;
+  const {
+    width,
+    height,
+    formData,
+    queriesData,
+    hooks,
+    rawFormData,
+    filterState,
+    emitCrossFilters,
+  } = chartProps;
   const fd = {
     ...DEFAULT_FORM_DATA,
     ...(rawFormData as CountryScatterplotMapQueryFormData),
@@ -146,9 +171,9 @@ export default function transformProps(
 
   const data: RegionMapDataItem[] = [];
   rows.forEach(row => {
-    const countryId = normalizeIso(
-      cellByLabel(row, entityLabel) ?? row.country_id,
-    );
+    const entityRaw = cellByLabel(row, entityLabel) ?? row.country_id;
+    const countryId = normalizeIso(entityRaw);
+    const filterValue = toFilterValue(entityRaw);
     const metric = toNumber(cellByLabel(row, metricLabel) ?? row.metric);
     const longitude = readCoord(row, lonLookups, LON_ALIASES, LON_KEY_RE);
     const latitude = readCoord(row, latLookups, LAT_ALIASES, LAT_KEY_RE);
@@ -166,6 +191,7 @@ export default function transformProps(
 
     data.push({
       country_id: countryId,
+      filterValue: filterValue ?? countryId,
       metric,
       longitude,
       latitude,
@@ -233,5 +259,9 @@ export default function transformProps(
     showWorldMap: pick(fd, 'showWorldMap', 'show_world_map') !== false,
     useLatLonBubbles,
     setControlValue: hooks?.setControlValue,
+    entityColumn: entityLabel,
+    filterState: filterState || {},
+    setDataMask: hooks?.setDataMask || NOOP,
+    emitCrossFilters,
   };
 }

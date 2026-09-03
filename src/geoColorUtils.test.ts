@@ -1,5 +1,12 @@
 import type { Feature } from 'geojson';
-import { getFeatureCenter, getGeoJsonBoundsPoints, percentToAlpha, colorToCss, toRgbColor } from './geoColorUtils';
+import {
+  getFeatureBoundsPoints,
+  getFeatureCenter,
+  getGeoJsonBoundsPoints,
+  percentToAlpha,
+  colorToCss,
+  toRgbColor,
+} from './geoColorUtils';
 
 const polygon: Feature = {
   type: 'Feature',
@@ -28,6 +35,13 @@ test('getGeoJsonBoundsPoints returns collection corners', () => {
     features: [polygon],
   });
   expect(points).toEqual([
+    [80, 50],
+    [90, 60],
+  ]);
+});
+
+test('getFeatureBoundsPoints returns feature corners', () => {
+  expect(getFeatureBoundsPoints(polygon)).toEqual([
     [80, 50],
     [90, 60],
   ]);

@@ -22,7 +22,10 @@ import { getNumberFormatter } from '@superset-ui/core';
 import { DeckGLContainerStyledWrapper } from '../../legacy-preset-chart-deckgl/src/DeckGLContainer';
 import type { Viewport } from '../../legacy-preset-chart-deckgl/src/utils/fitViewport';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import type { CountryScatterplotMapTransformedProps } from './types';
+import type {
+  CountryScatterplotMapTransformedProps,
+  RegionMapDataItem,
+} from './types';
 import {
   getMapboxStyleWarnings,
   resolveDeckMapStyle,
@@ -40,6 +43,11 @@ import { fitMapViewport } from './mapViewport';
 import { MapStatus, MapboxStyleWarning } from './MapStatus';
 import { useCountryGeoJson } from './useCountryGeoJson';
 import { useChartTooltip } from './useChartTooltip';
+import {
+  buildRegionCrossFilterDataMask,
+  resolveFilterValue,
+  selectedIsoFromFilterState,
+} from './crossFilter';
 
 type Props = CountryScatterplotMapTransformedProps & {
   className?: string;
@@ -70,6 +78,10 @@ function CountryScatterplotMapInner({
   useLatLonBubbles,
   bubbleData,
   setControlValue,
+  entityColumn,
+  filterState,
+  setDataMask,
+  emitCrossFilters,
   className,
 }: Props) {
   const { geoJson, loadError } = useCountryGeoJson(country);
@@ -119,6 +131,10 @@ function CountryScatterplotMapInner({
   );
 
   const dataByIso = useMemo(() => indexByIso(data), [data]);
+  const selectedIso = useMemo(
+    () => selectedIsoFromFilterState(filterState, dataByIso),
+    [filterState, dataByIso],
+  );
   const enrichedGeoJson = useMemo(
     () => (geoJson ? enrichGeoJson(geoJson, dataByIso) : null),
     [geoJson, dataByIso],
@@ -152,6 +168,22 @@ function CountryScatterplotMapInner({
     ],
   );
 
+  const onRegionSelect = useCallback(
+    (item: RegionMapDataItem) => {
+      if (!emitCrossFilters || !entityColumn) {
+        return;
+      }
+      setDataMask(
+        buildRegionCrossFilterDataMask({
+          entityColumn,
+          filterValue: resolveFilterValue(item),
+          filterState,
+        }),
+      );
+    },
+    [emitCrossFilters, entityColumn, filterState, setDataMask],
+  );
+
   const getAdjustedViewport = useCallback(
     () =>
       fitMapViewport(
@@ -161,8 +193,17 @@ function CountryScatterplotMapInner({
         autozoom,
         geoJson,
         bubblePoints,
+        selectedIso,
       ),
-    [autozoom, bubblePoints, geoJson, height, viewportProp, width],
+    [
+      autozoom,
+      bubblePoints,
+      geoJson,
+      height,
+      selectedIso,
+      viewportProp,
+      width,
+    ],
   );
   const [viewport, setViewport] = useState<Viewport>(getAdjustedViewport);
 
@@ -185,6 +226,9 @@ function CountryScatterplotMapInner({
             deckMapStyle,
             polygonAlpha,
             showWorldMap,
+            selectedIso,
+            emitCrossFilters,
+            onRegionSelect,
             showTooltip,
             hideTooltip,
           })
@@ -201,6 +245,9 @@ function CountryScatterplotMapInner({
       deckMapStyle,
       polygonAlpha,
       showWorldMap,
+      selectedIso,
+      emitCrossFilters,
+      onRegionSelect,
       showTooltip,
       hideTooltip,
     ],
@@ -226,7 +273,12 @@ function CountryScatterplotMapInner({
     <div
       className={className}
       key={`${deckMapStyle}-${showWorldMap}`}
-      style={{ width, height, position: 'relative' }}
+      style={{
+        width,
+        height,
+        position: 'relative',
+        cursor: emitCrossFilters ? 'pointer' : undefined,
+      }}
     >
       <MapboxStyleWarning keyMissing={keyMissing} tilesFailed={tilesFailed} />
       <DeckGLContainerStyledWrapper

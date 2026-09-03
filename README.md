@@ -8,6 +8,7 @@
 ## Features
 
 - Dashboard chart (not a Native Filter)
+- Dashboard cross-filters: click a region (or bubble) to filter other charts by **Entity**; click again to clear. Selected region gets a bold outline and the map zooms to it
 - Regions colored by metric via **Linear Color Scheme** (like Country Map)
 - Bubbles at region centers: **auto** from map GeoJSON by ISO code (like World Map), or optional **Longitude / Latitude** columns for custom position
 - Bubble size from **Metric** with **Minimum Radius**, **Maximum Radius**, **Multiplier**
