@@ -1,4 +1,9 @@
 # Country Scatterplot Map Chart Plugin — Apache Superset chart
+---
+
+### [🇷🇺 Русский](README.ru.md) | 🇬🇧 English
+
+---
 
 > **A custom Apache Superset plugin** that combines **Country Map** choropleth
 > region coloring with **Scatter Plot** bubbles at latitude/longitude centers.
@@ -238,7 +243,7 @@ With optional custom centers:
 ```
 superset-plugin-chart-country-scatterplot-map/
 ├── README.md
-├── README_RU.md
+├── README.ru.md
 ├── src/
 │   ├── index.ts
 │   ├── CountryScatterplotMap.tsx

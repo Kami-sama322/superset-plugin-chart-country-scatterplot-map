@@ -1,4 +1,9 @@
 # Country Scatterplot Map — плагин графика Apache Superset
+---
+
+### 🇷🇺 Русский | [🇬🇧 English](README.md)
+
+---
 
 > **Кастомный плагин Apache Superset**, совмещающий **Country Map** (хороплет регионов)
 > и **Scatter Plot** (пузырьки по координатам центров регионов).
@@ -238,7 +243,7 @@ docker compose up -d
 ```
 superset-plugin-chart-country-scatterplot-map/
 ├── README.md
-├── README_RU.md
+├── README.ru.md
 ├── src/
 │   ├── index.ts
 │   ├── CountryScatterplotMap.tsx
