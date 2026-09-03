@@ -7,7 +7,23 @@ import {
   getGeoJsonBoundsPoints,
 } from './geoColorUtils';
 import { findFeatureByIso } from './mapData';
+import { normalizeIso } from './columnUtils';
 import type { BubblePoint, MapViewport } from './types';
+
+function boundsForIsos(
+  geoJson: FeatureCollection,
+  isos: string[],
+): [number, number][] {
+  const points: [number, number][] = [];
+  isos.forEach(iso => {
+    const feature = findFeatureByIso(geoJson, iso);
+    if (!feature) {
+      return;
+    }
+    points.push(...getFeatureBoundsPoints(feature));
+  });
+  return points;
+}
 
 export function fitMapViewport(
   viewportProp: MapViewport | Viewport | undefined,
@@ -16,7 +32,8 @@ export function fitMapViewport(
   autozoom: boolean,
   geoJson: FeatureCollection | null,
   bubblePoints: BubblePoint[],
-  selectedIso?: string | null,
+  selectedIsos?: string[] | null,
+  dataIsos?: string[],
 ): Viewport {
   const baseViewport = {
     ...(viewportProp || {}),
@@ -24,28 +41,36 @@ export function fitMapViewport(
     height,
   } as Viewport;
 
-  if (selectedIso && geoJson) {
-    const feature = findFeatureByIso(geoJson, selectedIso);
-    if (feature) {
-      const regionPoints = getFeatureBoundsPoints(feature);
-      if (regionPoints.length) {
-        return fitViewport(baseViewport, {
-          width,
-          height,
-          points: regionPoints,
-          padding: 48,
-        });
-      }
+  const selection = (selectedIsos || []).map(normalizeIso).filter(Boolean);
+  if (selection.length && geoJson) {
+    const regionPoints = boundsForIsos(geoJson, selection);
+    if (regionPoints.length) {
+      return fitViewport(baseViewport, {
+        width,
+        height,
+        points: regionPoints,
+        padding: 48,
+      });
     }
   }
 
   if (!autozoom || !geoJson) {
     return baseViewport;
   }
-  const points = [
-    ...getGeoJsonBoundsPoints(geoJson),
-    ...bubblePoints.map(point => point.position),
-  ];
+
+  const dataIsoList = (dataIsos || []).map(normalizeIso).filter(Boolean);
+  const dataRegionPoints =
+    dataIsoList.length > 0 ? boundsForIsos(geoJson, dataIsoList) : [];
+  const preferDataRegions =
+    dataRegionPoints.length > 0 &&
+    dataIsoList.length < geoJson.features.length;
+
+  const points = preferDataRegions
+    ? [...dataRegionPoints, ...bubblePoints.map(point => point.position)]
+    : [
+        ...getGeoJsonBoundsPoints(geoJson),
+        ...bubblePoints.map(point => point.position),
+      ];
   if (!points.length) {
     return baseViewport;
   }
@@ -53,6 +78,6 @@ export function fitMapViewport(
     width,
     height,
     points,
-    padding: 40,
+    padding: preferDataRegions ? 48 : 40,
   });
 }

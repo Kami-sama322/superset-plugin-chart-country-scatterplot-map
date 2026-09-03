@@ -101,6 +101,10 @@ export interface CountryScatterplotMapTransformedProps {
   setControlValue?: SetControlValue;
   entityColumn: string;
   filterState: FilterState;
+  /** Values from formData.extra_form_data filters on the entity column */
+  appliedFilterValues: DataRecordValue[];
+  /** True when any external extra_form_data.filters are present */
+  hasExternalFilters: boolean;
   setDataMask: SetDataMaskHook;
   emitCrossFilters?: boolean;
 }

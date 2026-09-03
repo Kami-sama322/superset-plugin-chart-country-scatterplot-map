@@ -24,7 +24,7 @@ type MapLayerOptions = {
   deckMapStyle: string;
   polygonAlpha: number;
   showWorldMap: boolean;
-  selectedIso: string | null;
+  selectedIsos: ReadonlySet<string>;
   emitCrossFilters?: boolean;
   onRegionSelect: (item: RegionMapDataItem) => void;
   showTooltip: (
@@ -55,7 +55,7 @@ export function createMapLayers({
   deckMapStyle,
   polygonAlpha,
   showWorldMap,
-  selectedIso,
+  selectedIsos,
   emitCrossFilters,
   onRegionSelect,
   showTooltip,
@@ -67,8 +67,11 @@ export function createMapLayers({
   const basemapLayer = rasterUrl
     ? createBasemapLayer(rasterUrl, clipBasemap)
     : null;
-  const hasSelection = Boolean(selectedIso);
+  const hasSelection = selectedIsos.size > 0;
+  const selectionKey = [...selectedIsos].sort().join(',');
   const pickable = true;
+
+  const isSelected = (iso: string) => Boolean(iso && selectedIsos.has(iso));
 
   const regionLayer = new GeoJsonLayer({
     id: 'country-scatterplot-regions',
@@ -82,12 +85,12 @@ export function createMapLayers({
     lineWidthMinPixels: 2,
     getLineColor: (feature: { properties?: Record<string, unknown> }) => {
       const iso = normalizeIso(feature.properties?.ISO);
-      return iso && iso === selectedIso ? SELECTED_LINE : DEFAULT_LINE;
+      return isSelected(iso) ? SELECTED_LINE : DEFAULT_LINE;
     },
     getFillColor: (feature: { properties?: Record<string, unknown> }) => {
       const iso = normalizeIso(feature.properties?.ISO);
       const row = dataByIso[iso];
-      const selected = Boolean(iso && iso === selectedIso);
+      const selected = isSelected(iso);
       const alpha = dimAlpha(polygonAlpha, selected, hasSelection);
       if (!row) {
         return [200, 200, 200, alpha];
@@ -97,12 +100,12 @@ export function createMapLayers({
     },
     getLineWidth: (feature: { properties?: Record<string, unknown> }) => {
       const iso = normalizeIso(feature.properties?.ISO);
-      return iso && iso === selectedIso ? 4 : 1.5;
+      return isSelected(iso) ? 4 : 1.5;
     },
     updateTriggers: {
-      getFillColor: [polygonAlpha, linearColorScheme, selectedIso],
-      getLineColor: [selectedIso],
-      getLineWidth: [selectedIso],
+      getFillColor: [polygonAlpha, linearColorScheme, selectionKey],
+      getLineColor: [selectionKey],
+      getLineWidth: [selectionKey],
     },
     onHover: ({ object, x, y }) => {
       if (!object) {
@@ -132,7 +135,7 @@ export function createMapLayers({
     radiusMaxPixels: maxRadius,
     getFillColor: d => {
       const iso = normalizeIso(d.country_id);
-      const selected = Boolean(iso && iso === selectedIso);
+      const selected = isSelected(iso);
       const [r, g, b, a] = d.fillColor;
       return [r, g, b, dimAlpha(a, selected, hasSelection)];
     },
@@ -140,17 +143,17 @@ export function createMapLayers({
     lineWidthUnits: 'pixels',
     getLineColor: d => {
       const iso = normalizeIso(d.country_id);
-      return iso && iso === selectedIso ? SELECTED_LINE : [255, 255, 255, 220];
+      return isSelected(iso) ? SELECTED_LINE : [255, 255, 255, 220];
     },
     getLineWidth: d => {
       const iso = normalizeIso(d.country_id);
-      return iso && iso === selectedIso ? 3 : 1;
+      return isSelected(iso) ? 3 : 1;
     },
     lineWidthMinPixels: 1,
     updateTriggers: {
-      getFillColor: [selectedIso],
-      getLineColor: [selectedIso],
-      getLineWidth: [selectedIso],
+      getFillColor: [selectionKey],
+      getLineColor: [selectionKey],
+      getLineWidth: [selectionKey],
     },
     onHover: ({ object, x, y }) => {
       if (!object) {

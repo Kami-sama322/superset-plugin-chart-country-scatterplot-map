@@ -18,6 +18,8 @@ import {
   selectBubbleItems,
   uniqueByIso,
 } from './bubblePosition';
+import { extractAppliedEntityValues } from './crossFilter';
+import type { AppliedExtraFormData } from './crossFilter';
 import {
   BubbleColorMode,
   CountryScatterplotMapQueryFormData,
@@ -157,10 +159,28 @@ export default function transformProps(
   ]);
   const metricLabel = fd.metric ? getMetricLabel(fd.metric) : 'metric';
   const entityLabel = entityCol ? getColumnLabel(entityCol) : 'country_id';
+  const entityKeys = [
+    ...new Set(
+      [...columnLookupKeys(entityCol), entityLabel, 'country_id'].filter(
+        Boolean,
+      ),
+    ),
+  ];
   const lonLabel = lonCol ? getColumnLabel(lonCol) : '';
   const latLabel = latCol ? getColumnLabel(latCol) : '';
   const lonLookups = columnLookupKeys(lonCol);
   const latLookups = columnLookupKeys(latCol);
+
+  const rawExtra = (
+    (fd as { extra_form_data?: AppliedExtraFormData }).extra_form_data ||
+    (rawFormData as { extra_form_data?: AppliedExtraFormData } | undefined)
+      ?.extra_form_data
+  ) as AppliedExtraFormData | undefined;
+  const hasExternalFilters = Boolean(rawExtra?.filters?.length);
+  const appliedFilterValues = extractAppliedEntityValues(
+    rawExtra,
+    entityKeys,
+  );
 
   const rows: DataRecord[] = queriesData?.[0]?.data || [];
   const reserved = new Set(
@@ -261,6 +281,8 @@ export default function transformProps(
     setControlValue: hooks?.setControlValue,
     entityColumn: entityLabel,
     filterState: filterState || {},
+    appliedFilterValues,
+    hasExternalFilters,
     setDataMask: hooks?.setDataMask || NOOP,
     emitCrossFilters,
   };

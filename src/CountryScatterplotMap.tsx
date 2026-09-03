@@ -46,7 +46,7 @@ import { useChartTooltip } from './useChartTooltip';
 import {
   buildRegionCrossFilterDataMask,
   resolveFilterValue,
-  selectedIsoFromFilterState,
+  resolveSelectedIsos,
 } from './crossFilter';
 
 type Props = CountryScatterplotMapTransformedProps & {
@@ -80,6 +80,8 @@ function CountryScatterplotMapInner({
   setControlValue,
   entityColumn,
   filterState,
+  appliedFilterValues,
+  hasExternalFilters,
   setDataMask,
   emitCrossFilters,
   className,
@@ -131,10 +133,18 @@ function CountryScatterplotMapInner({
   );
 
   const dataByIso = useMemo(() => indexByIso(data), [data]);
-  const selectedIso = useMemo(
-    () => selectedIsoFromFilterState(filterState, dataByIso),
-    [filterState, dataByIso],
+  const selectedIsos = useMemo(
+    () =>
+      resolveSelectedIsos({
+        filterState,
+        dataByIso,
+        appliedEntityValues: appliedFilterValues,
+        hasExternalFilters,
+      }),
+    [filterState, dataByIso, appliedFilterValues, hasExternalFilters],
   );
+  const selectedIsoSet = useMemo(() => new Set(selectedIsos), [selectedIsos]);
+
   const enrichedGeoJson = useMemo(
     () => (geoJson ? enrichGeoJson(geoJson, dataByIso) : null),
     [geoJson, dataByIso],
@@ -193,14 +203,16 @@ function CountryScatterplotMapInner({
         autozoom,
         geoJson,
         bubblePoints,
-        selectedIso,
+        selectedIsos,
+        Object.keys(dataByIso),
       ),
     [
       autozoom,
       bubblePoints,
+      dataByIso,
       geoJson,
       height,
-      selectedIso,
+      selectedIsos,
       viewportProp,
       width,
     ],
@@ -226,7 +238,7 @@ function CountryScatterplotMapInner({
             deckMapStyle,
             polygonAlpha,
             showWorldMap,
-            selectedIso,
+            selectedIsos: selectedIsoSet,
             emitCrossFilters,
             onRegionSelect,
             showTooltip,
@@ -245,7 +257,7 @@ function CountryScatterplotMapInner({
       deckMapStyle,
       polygonAlpha,
       showWorldMap,
-      selectedIso,
+      selectedIsoSet,
       emitCrossFilters,
       onRegionSelect,
       showTooltip,
