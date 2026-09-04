@@ -90,10 +90,57 @@ export function extractAppliedEntityValues(
   return values;
 }
 
+const TEMPORAL_OPS = new Set(['TEMPORAL_RANGE']);
+const RANGE_OPS = new Set(['>=', '<=', '>', '<', 'BETWEEN', '==']);
+const COMPARISON_OPS = new Set(['>=', '<=', '>', '<', 'BETWEEN']);
+const ISO_DATE_RE =
+  /^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/;
+const DATE_SPAN_RE = /^\d{4}-\d{2}-\d{2}.*:.*\d{4}-\d{2}-\d{2}/;
+const TEMPORAL_COL_RE =
+  /(^|_)(date|time|timestamp|datetime|dt|dttm)s?(_|$)/i;
+
+function looksLikeTemporalValue(value: unknown): boolean {
+  if (typeof value !== 'string') {
+    return false;
+  }
+  const text = value.trim();
+  if (!text) {
+    return false;
+  }
+  if (ISO_DATE_RE.test(text) || DATE_SPAN_RE.test(text)) {
+    return true;
+  }
+  if (text.includes(' : ')) {
+    return text.split(' : ').every(part => {
+      const piece = part.trim();
+      return !piece || looksLikeTemporalValue(piece);
+    });
+  }
+  return false;
+}
+
+export function isTemporalFilterClause(clause: AppliedFilterClause): boolean {
+  const op = String(clause.op || '').toUpperCase();
+  if (TEMPORAL_OPS.has(op)) {
+    return true;
+  }
+  const vals = ensureIsArray(clause.val);
+  const hasTemporalVal = vals.some(looksLikeTemporalValue);
+  if (hasTemporalVal && (RANGE_OPS.has(op) || op === 'IN' || op === 'NOT IN')) {
+    return true;
+  }
+  const col = clauseColumnName(clause.col);
+  return Boolean(col && TEMPORAL_COL_RE.test(col) && COMPARISON_OPS.has(op));
+}
+
 export function hasAppliedFilters(
   extraFormData: AppliedExtraFormData | null | undefined,
 ): boolean {
-  return Boolean(extraFormData?.filters?.length);
+  const clauses = extraFormData?.filters;
+  if (!clauses?.length) {
+    return false;
+  }
+  return clauses.some(clause => !isTemporalFilterClause(clause));
 }
 
 function flattenFilterValues(
@@ -153,8 +200,9 @@ export function selectedIsoFromFilterState(
  *
  * 1. Own filterState (click on map) → those entity values.
  * 2. Applied filters on the entity column → matching regions.
- * 3. Any other external filter on the same dataset (macroregion, category,
- *    …) → every region still present in query results after the filter.
+ * 3. Any other categorical external filter (macroregion, city, …) → every
+ *    region still present in query results after the filter.
+ *    Date / timestamp / daterange filters do not count as a selection.
  */
 export function resolveSelectedIsos({
   filterState,

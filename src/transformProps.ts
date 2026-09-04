@@ -18,7 +18,7 @@ import {
   selectBubbleItems,
   uniqueByIso,
 } from './bubblePosition';
-import { extractAppliedEntityValues } from './crossFilter';
+import { extractAppliedEntityValues, hasAppliedFilters } from './crossFilter';
 import type { AppliedExtraFormData } from './crossFilter';
 import {
   BubbleColorMode,
@@ -176,7 +176,7 @@ export default function transformProps(
     (rawFormData as { extra_form_data?: AppliedExtraFormData } | undefined)
       ?.extra_form_data
   ) as AppliedExtraFormData | undefined;
-  const hasExternalFilters = Boolean(rawExtra?.filters?.length);
+  const hasExternalFilters = hasAppliedFilters(rawExtra);
   const appliedFilterValues = extractAppliedEntityValues(
     rawExtra,
     entityKeys,

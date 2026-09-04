@@ -11,6 +11,10 @@ import type { BubblePoint, RegionMapDataItem } from './types';
 const DEFAULT_LINE: [number, number, number, number] = [255, 255, 255, 240];
 const SELECTED_LINE: [number, number, number, number] = [20, 20, 20, 255];
 const DIM_FILL_FACTOR = 0.35;
+const REGION_LINE_WIDTH = 1.25;
+const REGION_SELECTED_LINE_WIDTH = 2.25;
+const BUBBLE_LINE_WIDTH = 1;
+const BUBBLE_SELECTED_LINE_WIDTH = 1.5;
 
 type MapLayerOptions = {
   enrichedGeoJson: FeatureCollection;
@@ -82,7 +86,7 @@ export function createMapLayers({
     autoHighlight: true,
     highlightColor: [26, 26, 26, 120],
     lineWidthUnits: 'pixels',
-    lineWidthMinPixels: 2,
+    lineWidthMinPixels: 1,
     getLineColor: (feature: { properties?: Record<string, unknown> }) => {
       const iso = normalizeIso(feature.properties?.ISO);
       return isSelected(iso) ? SELECTED_LINE : DEFAULT_LINE;
@@ -100,7 +104,7 @@ export function createMapLayers({
     },
     getLineWidth: (feature: { properties?: Record<string, unknown> }) => {
       const iso = normalizeIso(feature.properties?.ISO);
-      return isSelected(iso) ? 4 : 1.5;
+      return isSelected(iso) ? REGION_SELECTED_LINE_WIDTH : REGION_LINE_WIDTH;
     },
     updateTriggers: {
       getFillColor: [polygonAlpha, linearColorScheme, selectionKey],
@@ -147,7 +151,9 @@ export function createMapLayers({
     },
     getLineWidth: d => {
       const iso = normalizeIso(d.country_id);
-      return isSelected(iso) ? 3 : 1;
+      return isSelected(iso)
+        ? BUBBLE_SELECTED_LINE_WIDTH
+        : BUBBLE_LINE_WIDTH;
     },
     lineWidthMinPixels: 1,
     updateTriggers: {

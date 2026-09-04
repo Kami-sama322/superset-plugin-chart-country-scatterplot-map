@@ -1,6 +1,8 @@
 import {
   buildRegionCrossFilterDataMask,
   extractAppliedEntityValues,
+  hasAppliedFilters,
+  isTemporalFilterClause,
   resolveFilterValue,
   resolveSelectedIsos,
   selectedIsoFromFilterState,
@@ -142,6 +144,111 @@ test('resolveSelectedIsos does not highlight without external filters', () => {
       dataByIso,
       appliedEntityValues: [],
       hasExternalFilters: false,
+    }),
+  ).toEqual([]);
+});
+
+test('isTemporalFilterClause detects date, timestamp and daterange ops', () => {
+  expect(
+    isTemporalFilterClause({
+      col: 'sale_date',
+      op: 'TEMPORAL_RANGE',
+      val: '2024-01-01 : 2024-12-31',
+    }),
+  ).toBe(true);
+  expect(
+    isTemporalFilterClause({ col: 'sale_date', op: '>=', val: '2024-01-01' }),
+  ).toBe(true);
+  expect(
+    isTemporalFilterClause({ col: 'sale_date', op: '<=', val: '2024-12-31' }),
+  ).toBe(true);
+  expect(
+    isTemporalFilterClause({ col: 'sale_date', op: '==', val: '2024-03-15' }),
+  ).toBe(true);
+  expect(
+    isTemporalFilterClause({
+      col: 'created_at',
+      op: '>=',
+      val: '2024-01-01T00:00:00',
+    }),
+  ).toBe(true);
+  expect(
+    isTemporalFilterClause({ col: 'event_timestamp', op: '>=', val: 1 }),
+  ).toBe(true);
+  expect(
+    isTemporalFilterClause({ col: 'delivery_time', op: '==', val: 'morning' }),
+  ).toBe(false);
+  expect(
+    isTemporalFilterClause({ col: 'city', op: 'IN', val: ['moscow'] }),
+  ).toBe(false);
+  expect(
+    isTemporalFilterClause({ col: 'year', op: 'IN', val: [2024] }),
+  ).toBe(false);
+});
+
+test('hasAppliedFilters ignores date-only extra_form_data', () => {
+  expect(
+    hasAppliedFilters({
+      filters: [
+        { col: 'sale_date', op: '>=', val: '2024-01-01' },
+        { col: 'sale_date', op: '<=', val: '2024-12-31' },
+      ],
+    }),
+  ).toBe(false);
+  expect(
+    hasAppliedFilters({
+      filters: [
+        { col: 'ds', op: 'TEMPORAL_RANGE', val: 'Last week' },
+      ],
+    }),
+  ).toBe(false);
+  expect(
+    hasAppliedFilters({
+      filters: [{ col: 'sale_date', op: '==', val: '2024-03-15' }],
+    }),
+  ).toBe(false);
+});
+
+test('hasAppliedFilters is true for categorical filters even with dates', () => {
+  expect(
+    hasAppliedFilters({
+      filters: [{ col: 'city', op: 'IN', val: ['moscow'] }],
+    }),
+  ).toBe(true);
+  expect(
+    hasAppliedFilters({
+      filters: [
+        { col: 'sale_date', op: '>=', val: '2024-01-01' },
+        { col: 'city', op: 'IN', val: ['tomsk'] },
+      ],
+    }),
+  ).toBe(true);
+});
+
+test('resolveSelectedIsos does not highlight remaining regions for date-only filters', () => {
+  const dataByIso: Record<string, RegionMapDataItem> = {
+    'RU-TOM': {
+      country_id: 'RU-TOM',
+      filterValue: 'tomsk',
+      metric: 10,
+    },
+    'RU-NVS': {
+      country_id: 'RU-NVS',
+      filterValue: 'novosibirsk',
+      metric: 15,
+    },
+  };
+  expect(
+    resolveSelectedIsos({
+      filterState: {},
+      dataByIso,
+      appliedEntityValues: [],
+      hasExternalFilters: hasAppliedFilters({
+        filters: [
+          { col: 'sale_date', op: '>=', val: '2024-01-01' },
+          { col: 'sale_date', op: '<=', val: '2024-12-31' },
+        ],
+      }),
     }),
   ).toEqual([]);
 });
